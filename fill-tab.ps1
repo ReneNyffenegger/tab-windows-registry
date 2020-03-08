@@ -1,3 +1,4 @@
+set-strictMode -version 2
 
 #
 # ..\sqlite\interop.ps1
@@ -6,14 +7,20 @@
 #
 #  {4DF0A565-9D57-4495-AA5F-060662E6CF30}
 
-$db = sqliteNewDB "$pwd\windows-registry.db"
+[sqliteDB] $db = [sqliteDB]::new("$($pwd)\windows-registry.db", $true)
+
+# $db = sqliteNewDB "$pwd\windows-registry.db"
 
 # sqliteExec $db 'create table CLSID(id, InprocServer32, ProgId, AppId)'
-sqliteExec $db 'create table CLSID(id, name)'
+# sqliteExec $db 'create table CLSID(id, name)'
+$db.exec('create table CLSID(id, name)')
 
-$stmt = sqlitePrepareStmt $db 'insert into CLSID values (?, ?)'
+#$stmt = sqlitePrepareStmt $db 'insert into CLSID values (?, ?)'
+[sqliteStmt] $stmt = $db.prepareStmt('insert into CLSID values (?, ?)')
 
-sqliteExec $db 'begin transaction'
+# sqliteExec $db 'begin transaction'
+$db.exec('begin transaction')
+
 
 # $hklm = get-item hklm:
 $hkcr_clsid = get-item hkcr:\clsid
@@ -41,7 +48,8 @@ foreach ($clsidGuid in $hkcr_clsid.GetSubKeyNames()) {
    }
 
 
-   sqliteBindArrayStepReset $stmt ( $clsidGuid , $clsidName )
+  # sqliteBindArrayStepReset $stmt ( $clsidGuid , $clsidName )
+    $stmt.bindArrayStepReset( ($clsidGuid, $clsidName) )
 
 
 <#
@@ -66,7 +74,10 @@ foreach ($clsidGuid in $hkcr_clsid.GetSubKeyNames()) {
 
 }
 
-sqliteExec $db 'commit'
+# sqliteExec $db 'commit'
+$db.exec('commit')
 
-sqliteFinalize $stmt
-sqliteClose $db
+#sqliteFinalize $stmt
+#sqliteClose $db
+$stmt.finalize()
+$db.close()
